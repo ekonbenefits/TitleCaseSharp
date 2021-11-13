@@ -11,7 +11,10 @@ F# version ported by James Tuley 2021 (Ekon Benefits) from python https://github
 License: http://www.opensource.org/licenses/mit-license.php
 *)
 
-module TitleCase =
+type TitleCaseLineState = { AllCaps: bool}
+type TitleCaseWord = {Word:string; LineState: TitleCaseLineState}
+
+module Internals =
     let private stringOfChars:char seq -> string = Seq.toArray >> String
 
     [<AutoOpen>]
@@ -39,16 +42,16 @@ module TitleCase =
         let Preserve = Immutable >> Some
         let Accept = Mutable >> Some
         let capitalize (word:string) = CAPFIRST.Replace(word.ToLowerInvariant(),fun m->m.Groups[0].Value.ToUpperInvariant())
-        let (|Callback|_|) callback all_caps word =
+        let (|Callback|_|) callback lineState word =
             match callback with
-            | Some(cb) -> word |> cb all_caps |> Option.bind Preserve
+            | Some(cb) -> {Word = word; LineState =lineState} |> cb |> Option.bind Preserve
             | _ -> None;
         let (|AllCaps|_|) word =
             if UC_INITIALS.IsMatch(word) then
                 word |> Accept
             else
                 None
-        let (|AposSecond|_|) all_caps word =
+        let (|AposSecond|_|) state word =
             match APOS_SECOND.IsMatch(word) with
             | true -> 
                 let casing =
@@ -57,7 +60,7 @@ module TitleCase =
                     else
                         Char.ToUpperInvariant
                 let tailCasing =
-                    if all_caps then
+                    if state.AllCaps then
                         Char.ToLowerInvariant
                     else
                         id
@@ -78,8 +81,8 @@ module TitleCase =
                 |> stringOfChars 
                 |> Accept
             | false -> None
-        let (|InlinePeriod|_|) all_caps word =
-            if INLINE_PERIOD.IsMatch(word) || (not all_caps && UC_ELSEWHERE.IsMatch(word)) then
+        let (|InlinePeriod|_|) lineState word =
+            if INLINE_PERIOD.IsMatch(word) || (not lineState.AllCaps && UC_ELSEWHERE.IsMatch(word)) then
                 word |> Accept
             else
                 None
@@ -104,68 +107,76 @@ module TitleCase =
                 |> Accept
             else
                 None
-        let (|Abbreviation|_|) all_caps (word:string) =
-            let word' = if all_caps then word.ToLowerInvariant() else word
+        let (|Abbreviation|_|) lineState (word:string) =
+            let word' = if lineState.AllCaps then word.ToLowerInvariant() else word
             if CONSONANTS.IsMatch(word') && word.Length > 2 then
                 word.ToUpperInvariant() |> Accept
             else
                 None
-  
-    type CallBackFunc  = Func<string, bool, string>
+    
+    let rec titleCaseTransformer callback small_first_last text = 
+        let processed = 
+            seq {
+                let lines = Regex.Split(text, @"[\r\n]+");
+                for line in lines do
+                    let lineState = {AllCaps=line.ToUpperInvariant() = line} 
+                    let words = Regex.Split(line, @"[\t ]");
+                    let basicCapFirs (w:string) = 
+                        let w' = if lineState.AllCaps then w.ToLowerInvariant() else w
+                        CAPFIRST.Replace(w',fun m->m.Groups[0].Value.ToUpperInvariant()) |> Mutable
 
-    [<CompiledName("TransformWithCallback")>]
-    let transformWithCallback (callback: CallBackFunc) (text:string) =
-        let rec transf callback small_first_last text = 
-            let processed = 
-                seq {
-                    let lines = Regex.Split(text, @"[\r\n]+");
-                    for line in lines do
-                        let all_caps = line.ToUpperInvariant() = line
-                        let words = Regex.Split(line, @"[\t ]");
-                        let basicCapFirs (w:string) = 
-                            let w' = if all_caps then w.ToLowerInvariant() else w
-                            CAPFIRST.Replace(w',fun m->m.Groups[0].Value.ToUpperInvariant()) |> Mutable
 
-                        let tc_line =
-                            [|
-                                for word in words do
-                                   match word with
-                                   | Callback callback all_caps c -> c
-                                   | AllCaps a -> a
-                                   | AposSecond all_caps p -> p
-                                   | MacMc transf callback mc -> mc
-                                   | MrMrsMsDr mr -> mr
-                                   | InlinePeriod all_caps ip -> ip
-                                   | SmallWords sw -> sw
-                                   | Slashes transf callback sl -> sl
-                                   | Hyphens transf callback h -> h
-                                   | Abbreviation all_caps ab -> ab
-                                   | w -> basicCapFirs w
-                            |]
-                        let tc_line' =
-                            if small_first_last then
-                                let last = tc_line.Length-1
-                                let p0 =
-                                    match tc_line[0] with 
-                                    | Mutable s -> SMALL_FIRST.Replace(s, fun m -> $"%s{m.Groups[1].Value}%s{capitalize(m.Groups[2].Value)}") |> Mutable
-                                    | x -> x
-                                let tc0 = tc_line |> Array.updateAt 0 p0
-                                let pLast = 
-                                    match tc0[last] with 
-                                    | Mutable s -> SMALL_LAST.Replace(s, fun m -> capitalize(m.Groups[0].Value)) |> Mutable
-                                    | x -> x
-                                tc0 |> Array.updateAt last pLast
-                            else
-                                tc_line
-                        let result = tc_line' |> Seq.map (function | Mutable m -> m | Immutable i -> i) |> String.concat " "
-                        SUBPHRASE.Replace(result, fun m ->  $"%s{m.Groups[1].Value}%s{capitalize(m.Groups[2].Value)}")
-                }
-            processed |> String.concat Environment.NewLine
-        let callback' = 
-            callback 
-            |> Option.ofObj
-            |> Option.map (fun f'-> (fun x y-> f'.Invoke(y, x) |> Option.ofObj))
-        text |> transf callback' true
 
-    [<CompiledName("Transform")>]
-    let transform text = transformWithCallback null text
+                    let tc_line =
+                        [|
+                            for word in words do
+                                match word with
+                                | Callback callback lineState c -> c
+                                | AllCaps a -> a
+                                | AposSecond lineState p -> p
+                                | MacMc titleCaseTransformer callback mc -> mc
+                                | MrMrsMsDr mr -> mr
+                                | InlinePeriod lineState ip -> ip
+                                | SmallWords sw -> sw
+                                | Slashes titleCaseTransformer callback sl -> sl
+                                | Hyphens titleCaseTransformer callback h -> h
+                                | Abbreviation lineState ab -> ab
+                                | w -> basicCapFirs w
+                        |]
+                    let tc_line' =
+                        if small_first_last then
+                            let last = tc_line.Length-1
+                            let p0 =
+                                match tc_line[0] with 
+                                | Mutable s -> SMALL_FIRST.Replace(s, fun m -> $"%s{m.Groups[1].Value}%s{capitalize(m.Groups[2].Value)}") |> Mutable
+                                | x -> x
+                            let tc0 = tc_line |> Array.updateAt 0 p0
+                            let pLast = 
+                                match tc0[last] with 
+                                | Mutable s -> SMALL_LAST.Replace(s, fun m -> capitalize(m.Groups[0].Value)) |> Mutable
+                                | x -> x
+                            tc0 |> Array.updateAt last pLast
+                        else
+                            tc_line
+                    let result = tc_line' |> Seq.map (function | Mutable m -> m | Immutable i -> i) |> String.concat " "
+                    SUBPHRASE.Replace(result, fun m ->  $"%s{m.Groups[1].Value}%s{capitalize(m.Groups[2].Value)}")
+            }
+        processed |> String.concat Environment.NewLine
+
+module String =
+    let titleCase =  Internals.titleCaseTransformer None true
+    let titleCaseWith callback = Internals.titleCaseTransformer (Some callback) true
+
+open System.Runtime.CompilerServices
+open System.Runtime.InteropServices
+[<Extension>]
+type Transform = 
+    [<Extension>]
+    static member ToTitleCase(text:string,
+        [<Optional; DefaultParameterValue(null:Func<TitleCaseWord, string>)>] 
+        callback:Func<TitleCaseWord, string>) =
+            let callback' = 
+                callback 
+                |> Option.ofObj
+                |> Option.map (fun f'-> (fun x-> f'.Invoke(x) |> Option.ofObj))
+            text |> Internals.titleCaseTransformer callback' true

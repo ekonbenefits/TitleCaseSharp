@@ -157,30 +157,30 @@ open TitleCaseSharp
 [<InlineData("O'BANNON,", "O'Bannon,")>]
 [<InlineData("O'BANNON, ROCKNE", "O'Bannon, Rockne")>]
 let ``Generated Tests`` (input:string,  expected:string) =
-    Assert.Equal(expected, input |> TitleCase.transform )
+    Assert.Equal(expected, input |> String.titleCase)
 
 [<Fact>]
 let ``Test line mangle normalized to pplatform line ending`` () =
     let input ="this shouldn't\nget mangled"
     let expected = $"This Shouldn't{Environment.NewLine}Get Mangled"
-    Assert.Equal(expected, input |> TitleCase.transform )
+    Assert.Equal(expected, input |> String.titleCase)
 
 
 [<Fact>]
 let ``Test Callback`` () =
-    let abbreviation (word:string) _ =
-        if Set ["TCP"; "UDP"] |> Set.contains (word.ToUpper()) then
-            word.ToUpper()
+    let abbreviation (word:TitleCaseWord) =
+        if Set ["TCP"; "UDP"] |> Set.contains (word.Word.ToUpperInvariant()) then
+            Some <| word.Word.ToUpperInvariant()
         else
-            null
+            None
     let s = "a simple tcp and udp wrapper"
     // Note: this library is able to guess that all-consonant words are acronyms, so TCP
     // works naturally, but others will require the custom list
-    Assert.Equal("A Simple TCP and Udp Wrapper", s |> TitleCase.transform)
-    Assert.Equal("A Simple TCP and UDP Wrapper", s |> TitleCase.transformWithCallback (TitleCase.CallBackFunc abbreviation))
-    Assert.Equal("A Simple TCP and UDP Wrapper", s.ToUpper() |> TitleCase.transformWithCallback (TitleCase.CallBackFunc abbreviation))
-    Assert.Equal("CRÈME BRÛLÉE", "crème brûlée" |> TitleCase.transformWithCallback (TitleCase.CallBackFunc (fun x _ -> x.ToUpper())))
+    Assert.Equal("A Simple TCP and Udp Wrapper", s |> String.titleCase)
+    Assert.Equal("A Simple TCP and UDP Wrapper", s |> String.titleCaseWith abbreviation)
+    Assert.Equal("A Simple TCP and UDP Wrapper", s.ToUpper() |> String.titleCaseWith abbreviation)
+    Assert.Equal("CRÈME BRÛLÉE", "crème brûlée" |> String.titleCaseWith (fun w -> Some <| w.Word.ToUpperInvariant()))
 
 [<Fact>]
 let ``Test AT&T`` () =
-    Assert.Equal("AT&T", "at&t" |> TitleCase.transformWithCallback (TitleCase.CallBackFunc (fun x _ -> match x.ToUpper() with | "AT&T" as x -> x | _ -> null)))
+    Assert.Equal("AT&T", "at&t" |> String.titleCaseWith (function | {Word=x} when x.ToUpperInvariant() = "AT&T" -> Some <| x.ToUpperInvariant() | _ -> None))
