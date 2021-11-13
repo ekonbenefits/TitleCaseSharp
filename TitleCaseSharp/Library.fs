@@ -41,13 +41,11 @@ module TitleCase =
             match callback with
             | Some(cb) -> word |> cb all_caps |> Option.bind Preserve
             | _ -> None;
-
         let (|AllCaps|_|) word =
             if UC_INITIALS.IsMatch(word) then
                 word |> Accept
             else
                 None
-
         let (|AposSecond|_|) word =
             match APOS_SECOND.IsMatch(word) with
             | true -> 
@@ -60,7 +58,6 @@ module TitleCase =
                 |> stringOfChars 
                 |> Accept
             | false  -> None
-                    
         let (|MacMc|_|) transf callback word =
             match MAC_MC.Match(word) with
             | m when m.Success ->
@@ -74,19 +71,16 @@ module TitleCase =
                 |> stringOfChars 
                 |> Accept
             | false -> None
-
         let (|InlinePeriod|_|) all_caps word =
             if INLINE_PERIOD.IsMatch(word) || (not all_caps && UC_ELSEWHERE.IsMatch(word)) then
                 word |> Accept
             else
                 None
-    
         let (|SmallWords|_|) word =
             if SMALL_WORDS.IsMatch(word) then
                 word.ToLowerInvariant() |> Accept
             else
                 None
-
         let (|Slashes|_|) transf callback (word:string) =
             if word.Contains("/") &&  not <| word.Contains("//") then
                 word.Split('/') 
@@ -95,7 +89,6 @@ module TitleCase =
                 |> Accept
             else
                 None
-
         let (|Hyphens|_|) transf callback (word:string) =
             if word.Contains("-") then
                 word.Split('-') 
@@ -104,7 +97,6 @@ module TitleCase =
                 |> Accept
             else
                 None
-
         let (|Abbreviation|_|) all_caps (word:string) =
             let word' = if all_caps then word.ToLowerInvariant() else word
             if CONSONANTS.IsMatch(word') && word.Length > 2 then
@@ -162,11 +154,11 @@ module TitleCase =
                         SUBPHRASE.Replace(result, fun m ->  $"%s{m.Groups[1].Value}%s{capitalize(m.Groups[2].Value)}")
                 }
             processed |> String.concat Environment.NewLine
-            
         let callback' = 
             callback 
             |> Option.ofObj
             |> Option.map (fun f'-> (fun x y-> f'.Invoke(y, x) |> Option.ofObj))
         text |> transf callback' true
+
     [<CompiledName("Transform")>]
     let transform = transformWithCallback null
