@@ -9,6 +9,7 @@
 	<Company>Ekon Benefits</Company>
 	<PackageTags>text title case proper names</PackageTags>
 	<PackageLicenseExpression>MIT</PackageLicenseExpression>
+	<RepositoryUrl>https://github.com/ekonbenefits/TitleCaseSharp</RepositoryUrl>
   </PropertyGroup>
 
   <ItemGroup>
