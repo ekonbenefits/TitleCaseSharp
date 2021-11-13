@@ -100,8 +100,6 @@ open TitleCaseSharp
 "This Is All Caps and Should Be Addressed")>]
 [<InlineData("Mr McTavish went to MacDonalds",
 "Mr McTavish Went to MacDonalds")>]
-[<InlineData("this shouldn't\nget mangled",
-$"This Shouldn't\nGet Mangled")>]
 [<InlineData("this is http://foo.com",
  "This Is http://foo.com")>]
 [<InlineData("mac mc MAC MC machine",
@@ -157,3 +155,25 @@ $"This Shouldn't\nGet Mangled")>]
 "Mr Mr Mrs Ms MSS Dr Dr , Mr. And Mrs. Person")>]
 let ``Generated Tests`` (input:string,  expected:string) =
     Assert.Equal(expected, input |> TitleCase.transform )
+
+[<Fact>]
+let ``Test line mangle normalized to pplatform line ending`` () =
+    let input ="this shouldn't\nget mangled"
+    let expected = $"This Shouldn't{Environment.NewLine}Get Mangled"
+    Assert.Equal(expected, input |> TitleCase.transform )
+
+
+[<Fact>]
+let ``Test Callback`` () =
+    let abbreviation (word:string) _ =
+        if Set ["TCP"; "UDP"] |> Set.contains (word.ToUpper()) then
+            word.ToUpper()
+        else
+            null
+    let s = "a simple tcp and udp wrapper"
+    // Note: this library is able to guess that all-consonant words are acronyms, so TCP
+    // works naturally, but others will require the custom list
+    Assert.Equal("A Simple TCP and Udp Wrapper", s |> TitleCase.transform)
+    Assert.Equal("A Simple TCP and UDP Wrapper", s |> TitleCase.transformWithCallback (TitleCase.CallBackFunc abbreviation))
+    Assert.Equal("A Simple TCP and UDP Wrapper", s.ToUpper() |> TitleCase.transformWithCallback (TitleCase.CallBackFunc abbreviation))
+    Assert.Equal("CRÈME BRÛLÉE", "crème brûlée" |> TitleCase.transformWithCallback (TitleCase.CallBackFunc (fun x _ -> x.ToUpper())))

@@ -39,7 +39,7 @@ module TitleCase =
         let capitalize (word:string) = CAPFIRST.Replace(word.ToLower(),fun m->m.Groups[0].Value.ToUpper())
         let (|Callback|_|) callback all_caps word =
             match callback with
-            | Some(cb) -> word |> cb all_caps |> Preserve
+            | Some(cb) -> word |> cb all_caps |> Option.bind Preserve
             | _ -> None;
 
         let (|AllCaps|_|) word =
@@ -112,8 +112,10 @@ module TitleCase =
             else
                 None
   
+    type CallBackFunc  = Func<string, bool, string>
+
     [<CompiledName("TransformWithCallback")>]
-    let transformWithCallback (callback: Func<string, bool, string>) (text:string) =
+    let transformWithCallback (callback: CallBackFunc) (text:string) =
         let rec transf callback small_first_last text  = 
             let processed = 
                 seq {
@@ -164,7 +166,7 @@ module TitleCase =
         let callback' = 
             callback 
             |> Option.ofObj
-            |> Option.map (fun f'-> (fun x y-> f'.Invoke(y, x)))
+            |> Option.map (fun f'-> (fun x y-> f'.Invoke(y, x) |> Option.ofObj))
         text |> transf callback' true
     [<CompiledName("Transform")>]
     let transform = transformWithCallback null
