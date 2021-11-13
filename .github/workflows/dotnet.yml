@@ -23,3 +23,7 @@ jobs:
       run: dotnet build --no-restore
     - name: Test
       run: dotnet test --no-build --verbosity normal
+    - name: PUblish
+      run: |
+        dotnet pack --configuration Release --version-suffix alpha.$GITHUB_RUN_NUMBER
+        dotnet nuget push "TitleCaseSharp/bin/Release/*.nupkg"  --api-key ${{ secrets.GITHUB_TOKEN }} --source "github"
