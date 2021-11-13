@@ -177,3 +177,7 @@ let ``Test Callback`` () =
     Assert.Equal("A Simple TCP and UDP Wrapper", s |> TitleCase.transformWithCallback (TitleCase.CallBackFunc abbreviation))
     Assert.Equal("A Simple TCP and UDP Wrapper", s.ToUpper() |> TitleCase.transformWithCallback (TitleCase.CallBackFunc abbreviation))
     Assert.Equal("CRÈME BRÛLÉE", "crème brûlée" |> TitleCase.transformWithCallback (TitleCase.CallBackFunc (fun x _ -> x.ToUpper())))
+
+[<Fact>]
+let ``Test AT&T`` () =
+    Assert.Equal("AT&T", "at&t" |> TitleCase.transformWithCallback (TitleCase.CallBackFunc (fun x _ -> match x.ToUpper() with | "AT&T" as x -> x | _ -> null)))
