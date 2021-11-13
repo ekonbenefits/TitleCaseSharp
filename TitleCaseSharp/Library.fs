@@ -163,8 +163,11 @@ module Internals =
             }
         processed |> String.concat Environment.NewLine
 
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module String =
+    [<CompiledName("TitleCase")>]
     let titleCase =  Internals.titleCaseTransformer None true
+        [<CompiledName("TitleCaseWith")>]
     let titleCaseWith callback = Internals.titleCaseTransformer (Some callback) true
 
 open System.Runtime.CompilerServices
