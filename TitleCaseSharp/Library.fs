@@ -36,7 +36,7 @@ module TitleCase =
     module Patterns =
         let Preserve = Immutable >> Some
         let Accept = Mutable >> Some
-        let capitalize (word:string) = CAPFIRST.Replace(word.ToLower(),fun m->m.Groups[0].Value.ToUpper())
+        let capitalize (word:string) = CAPFIRST.Replace(word.ToLowerInvariant(),fun m->m.Groups[0].Value.ToUpperInvariant())
         let (|Callback|_|) callback all_caps word =
             match callback with
             | Some(cb) -> word |> cb all_caps |> Option.bind Preserve
@@ -53,10 +53,10 @@ module TitleCase =
             | true -> 
                 let casing =
                     if not <| "aeiouAEIOU".Contains(string word[0]) then
-                        Char.ToLower
+                        Char.ToLowerInvariant
                     else
-                        Char.ToUpper
-                seq { casing(word[0]); word[1]; Char.ToUpper(word[2]); yield! word[3..] } 
+                        Char.ToUpperInvariant
+                seq { casing(word[0]); word[1]; Char.ToUpperInvariant(word[2]); yield! word[3..] } 
                 |> stringOfChars 
                 |> Accept
             | false  -> None
@@ -70,7 +70,7 @@ module TitleCase =
         let (|MrMrsMsDr|_|) word =
             match MR_MRS_MS_DR.IsMatch(word) with
             | true -> 
-                seq { Char.ToUpper(word[0]); yield! word[1..]}
+                seq { Char.ToUpperInvariant(word[0]); yield! word[1..]}
                 |> stringOfChars 
                 |> Accept
             | false -> None
@@ -83,7 +83,7 @@ module TitleCase =
     
         let (|SmallWords|_|) word =
             if SMALL_WORDS.IsMatch(word) then
-                word.ToLower() |> Accept
+                word.ToLowerInvariant() |> Accept
             else
                 None
 
@@ -106,9 +106,9 @@ module TitleCase =
                 None
 
         let (|Abbreviation|_|) all_caps (word:string) =
-            let word' = if all_caps then word.ToLower() else word
+            let word' = if all_caps then word.ToLowerInvariant() else word
             if CONSONANTS.IsMatch(word') && word.Length > 2 then
-                word.ToUpper() |> Accept
+                word.ToUpperInvariant() |> Accept
             else
                 None
   
@@ -116,16 +116,16 @@ module TitleCase =
 
     [<CompiledName("TransformWithCallback")>]
     let transformWithCallback (callback: CallBackFunc) (text:string) =
-        let rec transf callback small_first_last text  = 
+        let rec transf callback small_first_last text = 
             let processed = 
                 seq {
                     let lines = Regex.Split(text, @"[\r\n]+");
                     for line in lines do
-                        let all_caps = line.ToUpper() = line
+                        let all_caps = line.ToUpperInvariant() = line
                         let words = Regex.Split(line, @"[\t ]");
                         let basicCapFirs (w:string) = 
-                            let w' = if all_caps then w.ToLower() else w
-                            CAPFIRST.Replace(w',fun m->m.Groups[0].Value.ToUpper()) |> Mutable
+                            let w' = if all_caps then w.ToLowerInvariant() else w
+                            CAPFIRST.Replace(w',fun m->m.Groups[0].Value.ToUpperInvariant()) |> Mutable
 
                         let tc_line =
                             [|
