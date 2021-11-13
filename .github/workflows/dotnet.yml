@@ -23,7 +23,8 @@ jobs:
       run: dotnet build --no-restore
     - name: Test
       run: dotnet test --no-build --verbosity normal
-    - name: PUblish
+    - name: Publish
       run: |
         dotnet pack --configuration Release --version-suffix alpha.$GITHUB_RUN_NUMBER
+        dotnet nuget add source --username $GITHUB_ACTOR --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text --name github "https://nuget.pkg.github.com/ekonbenefits/index.json"
         dotnet nuget push "TitleCaseSharp/bin/Release/*.nupkg"  --api-key ${{ secrets.GITHUB_TOKEN }} --source "github"
