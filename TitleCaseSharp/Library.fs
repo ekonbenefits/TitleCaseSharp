@@ -48,7 +48,7 @@ module TitleCase =
                 word |> Accept
             else
                 None
-        let (|AposSecond|_|) word =
+        let (|AposSecond|_|) all_caps word =
             match APOS_SECOND.IsMatch(word) with
             | true -> 
                 let casing =
@@ -57,7 +57,7 @@ module TitleCase =
                     else
                         Char.ToUpperInvariant
                 let tailCasing =
-                    if word.ToUpperInvariant() = word then
+                    if all_caps then
                         Char.ToLowerInvariant
                     else
                         id
@@ -132,7 +132,7 @@ module TitleCase =
                                    match word with
                                    | Callback callback all_caps c -> c
                                    | AllCaps a -> a
-                                   | AposSecond p -> p
+                                   | AposSecond all_caps p -> p
                                    | MacMc transf callback mc -> mc
                                    | MrMrsMsDr mr -> mr
                                    | InlinePeriod all_caps ip -> ip
