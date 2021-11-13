@@ -7,7 +7,7 @@ open System
 (*
 Original Perl version by: John Gruber http://daringfireball.net/ 10 May 2008
 Python version by Stuart Colville http://muffinresearch.co.uk
-F# version ported by James Tuley (Ekon Benefits) from python https://github.com/ppannuto/python-titlecase 2de89b2  
+F# version ported by James Tuley 2021 (Ekon Benefits) from python https://github.com/ppannuto/python-titlecase 2de89b2  
 License: http://www.opensource.org/licenses/mit-license.php
 *)
 
@@ -63,7 +63,6 @@ module TitleCase =
             | m when m.Success ->
                 $"%s{capitalize(m.Groups[1].Value)}%s{m.Groups[2].Value |> transf callback true}" |> Accept
             | _ -> None
-                    
         let (|MrMrsMsDr|_|) word =
             match MR_MRS_MS_DR.IsMatch(word) with
             | true -> 
