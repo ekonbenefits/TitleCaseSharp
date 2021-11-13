@@ -153,6 +153,9 @@ open TitleCaseSharp
 //https://github.com/ppannuto/python-titlecase/pull/67
 [<InlineData("Mr mr Mrs Ms Mss Dr dr , Mr. and Mrs. Person",
 "Mr Mr Mrs Ms MSS Dr Dr , Mr. And Mrs. Person")>]
+//EkonBenefits
+[<InlineData("O'BANNON,", "O'Bannon,")>]
+[<InlineData("O'BANNON, ROCKNE", "O'Bannon, Rockne")>]
 let ``Generated Tests`` (input:string,  expected:string) =
     Assert.Equal(expected, input |> TitleCase.transform )
 

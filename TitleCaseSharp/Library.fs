@@ -25,7 +25,7 @@ module TitleCase =
     let INLINE_PERIOD = Regex(@"[\w][.][\w]", RegexOptions.IgnoreCase ||| RegexOptions.Multiline ||| RegexOptions.Compiled)
     let UC_ELSEWHERE = Regex($@"[%s{PUNCT}]*?[a-zA-Z]+[A-Z]+?", RegexOptions.Compiled)
     let CAPFIRST = Regex($@"^[%s{PUNCT}]*?([\w])", RegexOptions.Compiled)
-    let APOS_SECOND = Regex(@"^[dol]['‘][\w]+(?:['s]{2})?$", RegexOptions.IgnoreCase ||| RegexOptions.Compiled)
+    let APOS_SECOND = Regex($@"^[dol]['‘][\w]+(?:['s]{{2}})?[%s{PUNCT}]?$", RegexOptions.IgnoreCase ||| RegexOptions.Compiled)
     let UC_INITIALS = Regex(@"^(?:[A-Z]\.|[A-Z]\.[A-Z])+$")
     let CONSONANTS = Regex($@"\A[%s{Set.difference (Set ['a'..'z']) (Set ['a';'e';'i';'o';'u';'y']) |> stringOfChars}]+\Z",
                             RegexOptions.IgnoreCase ||| RegexOptions.Multiline ||| RegexOptions.Compiled)
@@ -54,7 +54,13 @@ module TitleCase =
                         Char.ToLowerInvariant
                     else
                         Char.ToUpperInvariant
-                seq { casing(word[0]); word[1]; Char.ToUpperInvariant(word[2]); yield! word[3..] } 
+                let tailCasing =
+                    if word.ToUpperInvariant() = word then
+                        Char.ToLowerInvariant
+                    else
+                        id
+
+                seq { casing(word[0]); word[1]; Char.ToUpperInvariant(word[2]); yield! word[3..] |> Seq.map tailCasing } 
                 |> stringOfChars 
                 |> Accept
             | false  -> None
