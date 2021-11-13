@@ -160,4 +160,4 @@ module TitleCase =
         text |> transf callback' true
 
     [<CompiledName("Transform")>]
-    let transform = transformWithCallback null
+    let transform text = transformWithCallback null text
