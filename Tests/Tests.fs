@@ -101,7 +101,7 @@ open TitleCaseSharp
 [<InlineData("Mr McTavish went to MacDonalds",
 "Mr McTavish Went to MacDonalds")>]
 [<InlineData("this shouldn't\nget mangled",
-"This Shouldn't\nGet Mangled")>]
+$"This Shouldn't\nGet Mangled")>]
 [<InlineData("this is http://foo.com",
  "This Is http://foo.com")>]
 [<InlineData("mac mc MAC MC machine",

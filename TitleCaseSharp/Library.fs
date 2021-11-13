@@ -12,9 +12,10 @@ License: http://www.opensource.org/licenses/mit-license.php
 *)
 
 module TitleCase =
+    let private stringOfChars:char seq -> string = Seq.toArray >> String
 
     let SMALL = @"a|an|and|as|at|but|by|en|for|if|in|of|on|or|the|to|v\.?|via|vs\.?"
-    let PUNCT = """!"“#$%&'‘()*+,\-–‒—―./:;?@[\\\]_`{|}~"""
+    let PUNCT = """!"“#$%&'‘()*+,\-–‒—―.\/:;?@[\\\]_`{|}~"""
     let SMALL_WORDS = Regex($@"^(%s{SMALL})$", RegexOptions.IgnoreCase ||| RegexOptions.Compiled)
     let SMALL_FIRST = Regex($@"^([%s{PUNCT}]*)(%s{SMALL})\b", RegexOptions.IgnoreCase ||| RegexOptions.Compiled)
     let SMALL_LAST = Regex($@"\b(%s{SMALL})[%s{PUNCT}]?$", RegexOptions.IgnoreCase ||| RegexOptions.Compiled)
@@ -26,7 +27,7 @@ module TitleCase =
     let CAPFIRST = Regex($@"^[%s{PUNCT}]*?([\w])", RegexOptions.Compiled)
     let APOS_SECOND = Regex(@"^[dol]['‘][\w]+(?:['s]{2})?$", RegexOptions.IgnoreCase ||| RegexOptions.Compiled)
     let UC_INITIALS = Regex(@"^(?:[A-Z]\.|[A-Z]\.[A-Z])+$")
-    let CONSONANTS = Regex($@"\A[%s{Set.difference (Set ['a'..'z']) (Set ['a';'e';'i';'o';'u';'y']) |> string}]+\Z",
+    let CONSONANTS = Regex($@"\A[%s{Set.difference (Set ['a'..'z']) (Set ['a';'e';'i';'o';'u';'y']) |> stringOfChars}]+\Z",
                             RegexOptions.IgnoreCase ||| RegexOptions.Multiline ||| RegexOptions.Compiled)
 
     type PreProcessed = Mutable of string | Immutable of string
@@ -35,8 +36,7 @@ module TitleCase =
     module Patterns =
         let Preserve = Immutable >> Some
         let Accept = Mutable >> Some
-        let capitalize = CultureInfo.CurrentCulture.TextInfo.ToTitleCase
-
+        let capitalize (word:string) = CAPFIRST.Replace(word.ToLower(),fun m->m.Groups[0].Value.ToUpper())
         let (|Callback|_|) callback all_caps word =
             match callback with
             | Some(cb) -> word |> cb all_caps |> Preserve
@@ -52,12 +52,12 @@ module TitleCase =
             match APOS_SECOND.IsMatch(word) with
             | true -> 
                 let casing =
-                    if "aeiouAEIOU".Contains(string word[0]) then
+                    if not <| "aeiouAEIOU".Contains(string word[0]) then
                         Char.ToLower
                     else
                         Char.ToUpper
                 seq { casing(word[0]); word[1]; Char.ToUpper(word[2]); yield! word[3..] } 
-                |> string 
+                |> stringOfChars 
                 |> Accept
             | false  -> None
                     
@@ -71,7 +71,7 @@ module TitleCase =
             match MR_MRS_MS_DR.IsMatch(word) with
             | true -> 
                 seq { Char.ToUpper(word[0]); yield! word[1..]}
-                |> string 
+                |> stringOfChars 
                 |> Accept
             | false -> None
 
@@ -90,16 +90,18 @@ module TitleCase =
         let (|Slashes|_|) transf callback (word:string) =
             if word.Contains("/") &&  not <| word.Contains("//") then
                 word.Split('/') 
-                |> Seq.map(fun t -> t |> transf callback false ) 
-                |> String.concat "/" |> Accept
+                |> Seq.map(transf callback false) 
+                |> String.concat "/"
+                |> Accept
             else
                 None
 
         let (|Hyphens|_|) transf callback (word:string) =
             if word.Contains("-") then
                 word.Split('-') 
-                |> Seq.map(fun t -> t |> transf callback false ) 
-                |> String.concat "-" |> Accept
+                |> Seq.map(transf callback false) 
+                |> String.concat "-"
+                |> Accept
             else
                 None
 
@@ -117,8 +119,12 @@ module TitleCase =
                 seq {
                     let lines = Regex.Split(text, @"[\r\n]+");
                     for line in lines do
-                        let all_caps = line.ToUpperInvariant() = line
+                        let all_caps = line.ToUpper() = line
                         let words = Regex.Split(line, @"[\t ]");
+                        let basicCapFirs (w:string) = 
+                            let w' = if all_caps then w.ToLower() else w
+                            CAPFIRST.Replace(w',fun m->m.Groups[0].Value.ToUpper()) |> Mutable
+
                         let tc_line =
                             [|
                                 for word in words do
@@ -133,25 +139,25 @@ module TitleCase =
                                    | Slashes transf callback sl -> sl
                                    | Hyphens transf callback h -> h
                                    | Abbreviation all_caps ab -> ab
-                                   | w -> CAPFIRST.Replace(w,fun m->m.Groups[0].Value.ToUpper()) |> Mutable
+                                   | w -> basicCapFirs w
                             |]
                         let tc_line' =
                             if small_first_last then
-                                seq {
-                                    let last = tc_line.Length-1
+                                let last = tc_line.Length-1
+                                let p0 =
                                     match tc_line[0] with 
                                     | Mutable s -> SMALL_FIRST.Replace(s, fun m -> $"%s{m.Groups[1].Value}%s{capitalize(m.Groups[2].Value)}") |> Mutable
                                     | x -> x
-                                    yield! tc_line[1..last-1]
-                                    match tc_line[last] with 
+                                let tc0 = tc_line |> Array.updateAt 0 p0
+                                let pLast = 
+                                    match tc0[last] with 
                                     | Mutable s -> SMALL_LAST.Replace(s, fun m -> capitalize(m.Groups[0].Value)) |> Mutable
                                     | x -> x
-                            
-                                }
+                                tc0 |> Array.updateAt last pLast
                             else
                                 tc_line
                         let result = tc_line' |> Seq.map (function | Mutable m -> m | Immutable i -> i) |> String.concat " "
-                        SUBPHRASE.Replace(result, fun m -> capitalize(m.Groups[0].Value))
+                        SUBPHRASE.Replace(result, fun m ->  $"%s{m.Groups[1].Value}%s{capitalize(m.Groups[2].Value)}")
                 }
             processed |> String.concat Environment.NewLine
             
