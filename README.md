@@ -6,12 +6,16 @@
 
 ## C#
 ```csharp
+using TitleCaseSharp;
+
 "The SEC's Apple probe: what you need to know".ToTitleCase(); //The SEC's Apple Probe: What You Need to Know
 "dance with me/let’s face the music and dance".ToTitleCase(); //Dance With Me/Let’s Face the Music and Dance
 "Mr McTavish went to MacDonalds".ToTitleCase(); //Mr McTavish Went to MacDonalds
 ```
 ## F#
 ```fsharp
+open TitleCaseSharp
+
 "The SEC's Apple probe: what you need to know" |> string.titleCase //The SEC's Apple Probe: What You Need to Know
 "dance with me/let’s face the music and dance" |> string.titleCase //Dance With Me/Let’s Face the Music and Dance
 "Mr McTavish went to MacDonalds" |> string.titleCase //Mr McTavish Went to MacDonalds
