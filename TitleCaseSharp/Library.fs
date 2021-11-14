@@ -62,7 +62,6 @@ module Internals =
                         Char.ToLowerInvariant
                     else
                         id
-
                 [| casing(word[0]); word[1]; Char.ToUpperInvariant(word[2]); yield! word[3..] |> Seq.map tailCasing |]
                 |> String 
                 |> Accept
