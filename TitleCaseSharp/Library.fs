@@ -1,7 +1,6 @@
 ﻿namespace TitleCaseSharp
 
 open System.Text.RegularExpressions
-open System.Globalization
 open System
 
 (*
@@ -15,7 +14,6 @@ type TitleCaseLineState = { AllCaps: bool}
 type TitleCaseWord = {Word:string; LineState: TitleCaseLineState}
 
 module Internals =
-    let private stringOfChars:char seq -> string = Seq.toArray >> String
 
     [<AutoOpen>]
     module Regex =
@@ -32,7 +30,7 @@ module Internals =
         let CAPFIRST = Regex($@"^[%s{PUNCT}]*?([\w])", RegexOptions.Compiled)
         let APOS_SECOND = Regex($@"^[dol]['‘][\w]+(?:['s]{{2}})?[%s{PUNCT}]?$", RegexOptions.IgnoreCase ||| RegexOptions.Compiled)
         let UC_INITIALS = Regex(@"^(?:[A-Z]\.|[A-Z]\.[A-Z])+$")
-        let CONSONANTS = Regex($@"\A[%s{Set.difference (Set ['a'..'z']) (Set ['a';'e';'i';'o';'u';'y']) |> stringOfChars}]+\Z",
+        let CONSONANTS = Regex($@"\A[%s{Set.difference (Set ['a'..'z']) (Set ['a';'e';'i';'o';'u';'y']) |> Seq.toArray |> String}]+\Z",
                                 RegexOptions.IgnoreCase ||| RegexOptions.Multiline ||| RegexOptions.Compiled)
 
     type PreProcessed = Mutable of string | Immutable of string
@@ -65,8 +63,8 @@ module Internals =
                     else
                         id
 
-                seq { casing(word[0]); word[1]; Char.ToUpperInvariant(word[2]); yield! word[3..] |> Seq.map tailCasing } 
-                |> stringOfChars 
+                [| casing(word[0]); word[1]; Char.ToUpperInvariant(word[2]); yield! word[3..] |> Seq.map tailCasing |]
+                |> String 
                 |> Accept
             | false  -> None
         let (|MacMc|_|) transf callback word =
@@ -77,8 +75,8 @@ module Internals =
         let (|MrMrsMsDr|_|) word =
             match MR_MRS_MS_DR.IsMatch(word) with
             | true -> 
-                seq { Char.ToUpperInvariant(word[0]); yield! word[1..]}
-                |> stringOfChars 
+                [|Char.ToUpperInvariant(word[0]); yield! word[1..] |]
+                |> String 
                 |> Accept
             | false -> None
         let (|InlinePeriod|_|) lineState word =
@@ -124,9 +122,6 @@ module Internals =
                     let basicCapFirs (w:string) = 
                         let w' = if lineState.AllCaps then w.ToLowerInvariant() else w
                         CAPFIRST.Replace(w',fun m->m.Groups[0].Value.ToUpperInvariant()) |> Mutable
-
-
-
                     let tc_line =
                         [|
                             for word in words do
