@@ -66,10 +66,10 @@ module Internals =
                 |> String 
                 |> Accept
             | false  -> None
-        let (|MacMc|_|) transf callback word =
+        let (|MacMc|_|) transf word =
             match MAC_MC.Match(word) with
             | m when m.Success ->
-                $"%s{capitalize(m.Groups[1].Value)}%s{m.Groups[2].Value |> transf callback true}" |> Accept
+                $"%s{capitalize(m.Groups[1].Value)}%s{m.Groups[2].Value |> transf true}" |> Accept
             | _ -> None
         let (|MrMrsMsDr|_|) word =
             match MR_MRS_MS_DR.IsMatch(word) with
@@ -88,18 +88,18 @@ module Internals =
                 word.ToLowerInvariant() |> Accept
             else
                 None
-        let (|Slashes|_|) transf callback (word:string) =
+        let (|Slashes|_|) transf (word:string) =
             if word.Contains("/") &&  not <| word.Contains("//") then
                 word.Split('/') 
-                |> Seq.map(transf callback false) 
+                |> Seq.map(transf false) 
                 |> String.concat "/"
                 |> Accept
             else
                 None
-        let (|Hyphens|_|) transf callback (word:string) =
+        let (|Hyphens|_|) transf (word:string) =
             if word.Contains("-") then
                 word.Split('-') 
-                |> Seq.map(transf callback false) 
+                |> Seq.map(transf false) 
                 |> String.concat "-"
                 |> Accept
             else
@@ -121,6 +121,9 @@ module Internals =
                     let basicCapFirs (w:string) = 
                         let w' = if lineState.AllCaps then w.ToLowerInvariant() else w
                         CAPFIRST.Replace(w',fun m->m.Groups[0].Value.ToUpperInvariant()) |> Mutable
+
+                    let recurseFunction = titleCaseTransformer callback
+
                     let tc_line =
                         [|
                             for word in words do
@@ -128,12 +131,12 @@ module Internals =
                                 | Callback callback lineState c -> c
                                 | AllCaps a -> a
                                 | AposSecond lineState p -> p
-                                | MacMc titleCaseTransformer callback mc -> mc
+                                | MacMc recurseFunction mc -> mc
                                 | MrMrsMsDr mr -> mr
                                 | InlinePeriod lineState ip -> ip
                                 | SmallWords sw -> sw
-                                | Slashes titleCaseTransformer callback sl -> sl
-                                | Hyphens titleCaseTransformer callback h -> h
+                                | Slashes recurseFunction sl -> sl
+                                | Hyphens recurseFunction h -> h
                                 | Abbreviation lineState ab -> ab
                                 | w -> basicCapFirs w
                         |]
