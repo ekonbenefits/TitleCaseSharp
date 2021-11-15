@@ -108,12 +108,6 @@ open TitleCaseSharp
        "Foo Bar 5th St")>]
 [<InlineData("foo bar 5th st",
     "Foo Bar 5th St")>]
-[<InlineData("l'grange l'grange l'Grange l'Grange",
- "l'Grange l'Grange l'Grange l'Grange")>]
-[<InlineData("L'grange L'grange L'Grange L'Grange",
-      "l'Grange l'Grange l'Grange l'Grange")>]
-[<InlineData("l'GranGe",
-   "l'GranGe")>]
 [<InlineData("o'grange O'grange o'Grange O'Grange",
    "O'Grange O'Grange O'Grange O'Grange")>]
 [<InlineData("o'grange's O'grange's o'Grange's O'Grange's",
@@ -156,6 +150,8 @@ open TitleCaseSharp
 //EkonBenefits
 [<InlineData("O'BANNON,", "O'Bannon,")>]
 [<InlineData("O'BANNON, ROCKNE", "O'Bannon, Rockne")>]
+[<InlineData("D'ANDRE", "D'Andre")>]
+[<InlineData("L'SHONDA","L'Shonda")>]
 let ``Generated Tests`` (input:string,  expected:string) =
     Assert.Equal(expected, input |> String.titleCase)
 

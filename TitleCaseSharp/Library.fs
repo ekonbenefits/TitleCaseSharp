@@ -53,9 +53,12 @@ module Internals =
             match APOS_SECOND.IsMatch(word) with
             | true -> 
                 let casing =
-                    if not <| "aeiouAEIOU".Contains(string word[0]) then
-                        Char.ToLowerInvariant
-                    else
+ //                   Original only capitalized vowels, assumed d' and l' were used in non american context
+ //                   However, american proper names like D'Andre are capitalized, this title case library is special
+ //                   cased to american english so i'm not going to special case anymore
+ //                   if not <| "aeiouAEIOU".Contains(string word[0]) then
+ //                       Char.ToLowerInvariant
+ //                   else
                         Char.ToUpperInvariant
                 let tailCasing =
                     if state.AllCaps then
