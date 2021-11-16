@@ -41,7 +41,7 @@ module Internals =
     module Patterns =
         let Preserve = Immutable >> Some
         let Accept = Mutable >> Some
-        let capitalize (word:string) = CAPFIRST.Replace(word.ToLowerInvariant(),fun m->m.Groups.[0].Value.ToUpperInvariant())
+        let capitalizeFirstLetter (word:string) = CAPFIRST.Replace(word.ToLowerInvariant(),fun m->m.Groups.[0].Value.ToUpperInvariant())
         let (|Callback|_|) callback lineState word =
             match callback with
             | Some(cb) -> {Word = word; LineState =lineState} |> cb |> Option.bind Preserve
@@ -71,7 +71,7 @@ module Internals =
         let (|MacMc|_|) transf word =
             match MAC_MC.Match(word) with
             | m when m.Success ->
-                sprintf "%s%s" (capitalize m.Groups.[1].Value) (m.Groups.[2].Value |> transf true) |> Accept
+                sprintf "%s%s" (capitalizeFirstLetter m.Groups.[1].Value) (m.Groups.[2].Value |> transf true) |> Accept
             | _ -> None
         let (|MrMrsMsDr|_|) word =
             match MR_MRS_MS_DR_CAP.IsMatch(word) with
@@ -146,12 +146,12 @@ module Internals =
                         let last = tc_line.Length-1
                         let p0 =
                             match tc_line.[0] with 
-                            | Mutable s -> SMALL_FIRST.Replace(s, fun m -> sprintf "%s%s" m.Groups.[1].Value (capitalize m.Groups.[2].Value)) |> Mutable
+                            | Mutable s -> SMALL_FIRST.Replace(s, fun m -> sprintf "%s%s" m.Groups.[1].Value (capitalizeFirstLetter m.Groups.[2].Value)) |> Mutable
                             | x -> x
                         p0 |> Array.set tc_line 0 
                         let pLast = 
                             match tc_line.[last] with 
-                            | Mutable s -> SMALL_LAST.Replace(s, fun m -> capitalize(m.Groups.[0].Value)) |> Mutable
+                            | Mutable s -> SMALL_LAST.Replace(s, fun m -> capitalizeFirstLetter(m.Groups.[0].Value)) |> Mutable
                             | x -> x
                         pLast |> Array.set tc_line last 
                     let result = tc_line |> Seq.map (function | Mutable m -> m | Immutable i -> i) |> String.concat " "
@@ -162,7 +162,7 @@ module Internals =
                             if MR_MRS_MS_DR_2ND.IsMatch(wordPrePunc) then
                                 id
                             else 
-                                capitalize
+                                capitalizeFirstLetter
                         sprintf "%s%s" wordPrePunc (casing m.Groups.[2].Value)
 
                     SUBPHRASE.Replace(result, MatchEvaluator subReplace)
