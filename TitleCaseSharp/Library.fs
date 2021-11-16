@@ -19,18 +19,18 @@ module Internals =
     module Regex =
         let SMALL = @"a|an|and|as|at|but|by|en|for|if|in|of|on|or|the|to|v\.?|via|vs\.?"
         let PUNCT = """!"“#$%&'‘()*+,\-–‒—―.\/:;?@[\\\]_`{|}~"""
-        let SMALL_WORDS = Regex($@"^(%s{SMALL})$", RegexOptions.IgnoreCase ||| RegexOptions.Compiled)
-        let SMALL_FIRST = Regex($@"^([%s{PUNCT}]*)(%s{SMALL})\b", RegexOptions.IgnoreCase ||| RegexOptions.Compiled)
-        let SMALL_LAST = Regex($@"\b(%s{SMALL})[%s{PUNCT}]?$", RegexOptions.IgnoreCase ||| RegexOptions.Compiled)
-        let SUBPHRASE = Regex($@"((?:[a-zA-Z]{{2}}|[^a-zA-Z]+)[:.;?!\-–‒—―][ ])(%s{SMALL})", RegexOptions.Compiled)
+        let SMALL_WORDS = Regex(sprintf @"^(%s)$" SMALL, RegexOptions.IgnoreCase ||| RegexOptions.Compiled)
+        let SMALL_FIRST = Regex(sprintf @"^([%s]*)(%s)\b" PUNCT SMALL, RegexOptions.IgnoreCase ||| RegexOptions.Compiled)
+        let SMALL_LAST = Regex(sprintf @"\b(%s)[%s]?$" SMALL PUNCT, RegexOptions.IgnoreCase ||| RegexOptions.Compiled)
+        let SUBPHRASE = Regex(sprintf @"((?:[a-zA-Z]{2}|[^a-zA-Z]+)[:.;?!\-–‒—―][ ])(%s)"SMALL, RegexOptions.Compiled)
         let MAC_MC = Regex(@"^([Mm]c|MC)(\w.+)", RegexOptions.Compiled)
         let MR_MRS_MS_DR = Regex(@"^((m((rs?)|s))|Dr)$", RegexOptions.IgnoreCase ||| RegexOptions.Compiled)
         let INLINE_PERIOD = Regex(@"[\w][.][\w]", RegexOptions.IgnoreCase ||| RegexOptions.Multiline ||| RegexOptions.Compiled)
-        let UC_ELSEWHERE = Regex($@"[%s{PUNCT}]*?[a-zA-Z]+[A-Z]+?", RegexOptions.Compiled)
-        let CAPFIRST = Regex($@"^[%s{PUNCT}]*?([\w])", RegexOptions.Compiled)
-        let APOS_SECOND = Regex($@"^[dol]['‘][\w]+(?:['s]{{2}})?[%s{PUNCT}]?$", RegexOptions.IgnoreCase ||| RegexOptions.Compiled)
+        let UC_ELSEWHERE = Regex(sprintf @"[%s]*?[a-zA-Z]+[A-Z]+?" PUNCT, RegexOptions.Compiled)
+        let CAPFIRST = Regex(sprintf @"^[%s]*?([\w])" PUNCT, RegexOptions.Compiled)
+        let APOS_SECOND = Regex(sprintf @"^[dol]['‘][\w]+(?:['s]{2})?[%s]?$" PUNCT, RegexOptions.IgnoreCase ||| RegexOptions.Compiled)
         let UC_INITIALS = Regex(@"^(?:[A-Z]\.|[A-Z]\.[A-Z])+$")
-        let CONSONANTS = Regex($@"\A[%s{Set.difference (Set ['a'..'z']) (Set ['a';'e';'i';'o';'u';'y']) |> Seq.toArray |> String}]+\Z",
+        let CONSONANTS = Regex(sprintf @"\A[%s]+\Z" (Set.difference (Set ['a'..'z']) (Set ['a';'e';'i';'o';'u';'y']) |> Seq.toArray |> String),
                                 RegexOptions.IgnoreCase ||| RegexOptions.Multiline ||| RegexOptions.Compiled)
 
     type PreProcessed = Mutable of string | Immutable of string
@@ -39,7 +39,7 @@ module Internals =
     module Patterns =
         let Preserve = Immutable >> Some
         let Accept = Mutable >> Some
-        let capitalize (word:string) = CAPFIRST.Replace(word.ToLowerInvariant(),fun m->m.Groups[0].Value.ToUpperInvariant())
+        let capitalize (word:string) = CAPFIRST.Replace(word.ToLowerInvariant(),fun m->m.Groups.[0].Value.ToUpperInvariant())
         let (|Callback|_|) callback lineState word =
             match callback with
             | Some(cb) -> {Word = word; LineState =lineState} |> cb |> Option.bind Preserve
@@ -62,19 +62,19 @@ module Internals =
                         Char.ToLowerInvariant
                     else
                         id
-                [| casing(word[0]); word[1]; Char.ToUpperInvariant(word[2]); yield! word[3..] |> Seq.map tailCasing |]
+                [| casing(word.[0]); word.[1]; Char.ToUpperInvariant(word.[2]); yield! word.[3..] |> Seq.map tailCasing |]
                 |> String 
                 |> Accept
             | false  -> None
         let (|MacMc|_|) transf word =
             match MAC_MC.Match(word) with
             | m when m.Success ->
-                $"%s{capitalize(m.Groups[1].Value)}%s{m.Groups[2].Value |> transf true}" |> Accept
+                sprintf "%s%s" (capitalize m.Groups.[1].Value) (m.Groups.[2].Value |> transf true) |> Accept
             | _ -> None
         let (|MrMrsMsDr|_|) word =
             match MR_MRS_MS_DR.IsMatch(word) with
             | true -> 
-                [|Char.ToUpperInvariant(word[0]); yield! word[1..] |]
+                [|Char.ToUpperInvariant(word.[0]); yield! word.[1..] |]
                 |> String 
                 |> Accept
             | false -> None
@@ -120,7 +120,7 @@ module Internals =
                     let words = Regex.Split(line, @"[\t ]");
                     let basicCapFirs (w:string) = 
                         let w' = if lineState.AllCaps then w.ToLowerInvariant() else w
-                        CAPFIRST.Replace(w',fun m->m.Groups[0].Value.ToUpperInvariant()) |> Mutable
+                        CAPFIRST.Replace(w',fun m->m.Groups.[0].Value.ToUpperInvariant()) |> Mutable
 
                     let recurseFunction = titleCaseTransformer callback
 
@@ -140,23 +140,20 @@ module Internals =
                                 | Abbreviation lineState ab -> ab
                                 | w -> basicCapFirs w
                         |]
-                    let tc_line' =
-                        if small_first_last then
-                            let last = tc_line.Length-1
-                            let p0 =
-                                match tc_line[0] with 
-                                | Mutable s -> SMALL_FIRST.Replace(s, fun m -> $"%s{m.Groups[1].Value}%s{capitalize(m.Groups[2].Value)}") |> Mutable
-                                | x -> x
-                            let tc0 = tc_line |> Array.updateAt 0 p0
-                            let pLast = 
-                                match tc0[last] with 
-                                | Mutable s -> SMALL_LAST.Replace(s, fun m -> capitalize(m.Groups[0].Value)) |> Mutable
-                                | x -> x
-                            tc0 |> Array.updateAt last pLast
-                        else
-                            tc_line
-                    let result = tc_line' |> Seq.map (function | Mutable m -> m | Immutable i -> i) |> String.concat " "
-                    SUBPHRASE.Replace(result, fun m ->  $"%s{m.Groups[1].Value}%s{capitalize(m.Groups[2].Value)}")
+                    if small_first_last then
+                        let last = tc_line.Length-1
+                        let p0 =
+                            match tc_line.[0] with 
+                            | Mutable s -> SMALL_FIRST.Replace(s, fun m -> sprintf "%s%s" m.Groups.[1].Value (capitalize m.Groups.[2].Value)) |> Mutable
+                            | x -> x
+                        p0 |> Array.set tc_line 0 
+                        let pLast = 
+                            match tc_line.[last] with 
+                            | Mutable s -> SMALL_LAST.Replace(s, fun m -> capitalize(m.Groups.[0].Value)) |> Mutable
+                            | x -> x
+                        pLast |> Array.set tc_line last 
+                    let result = tc_line |> Seq.map (function | Mutable m -> m | Immutable i -> i) |> String.concat " "
+                    SUBPHRASE.Replace(result, fun m -> sprintf "%s%s" m.Groups.[1].Value (capitalize m.Groups.[2].Value))
             }
         processed |> String.concat Environment.NewLine
 
