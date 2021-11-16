@@ -22,9 +22,11 @@ module Internals =
         let SMALL_WORDS = Regex(sprintf @"^(%s)$" SMALL, RegexOptions.IgnoreCase ||| RegexOptions.Compiled)
         let SMALL_FIRST = Regex(sprintf @"^([%s]*)(%s)\b" PUNCT SMALL, RegexOptions.IgnoreCase ||| RegexOptions.Compiled)
         let SMALL_LAST = Regex(sprintf @"\b(%s)[%s]?$" SMALL PUNCT, RegexOptions.IgnoreCase ||| RegexOptions.Compiled)
-        let SUBPHRASE = Regex(sprintf @"((?:[a-zA-Z]{2}|[^a-zA-Z]+)[:.;?!\-–‒—―][ ])(%s)"SMALL, RegexOptions.Compiled)
+        let SUBPHRASE = Regex(sprintf @"((?:[a-zA-Z]{2,}|[^a-zA-Z]+)[:.;?!\-–‒—―][ ])(%s)"SMALL, RegexOptions.Compiled)
         let MAC_MC = Regex(@"^([Mm]c|MC)(\w.+)", RegexOptions.Compiled)
-        let MR_MRS_MS_DR = Regex(@"^((m((rs?)|s))|Dr)$", RegexOptions.IgnoreCase ||| RegexOptions.Compiled)
+        let MR_MRS_MS_DR = "((m((rs?)|s))|Dr)"
+        let MR_MRS_MS_DR_CAP = Regex(sprintf @"^%s$" MR_MRS_MS_DR, RegexOptions.IgnoreCase ||| RegexOptions.Compiled)
+        let MR_MRS_MS_DR_2ND = Regex(sprintf @"^%s\.\s+$" MR_MRS_MS_DR, RegexOptions.IgnoreCase ||| RegexOptions.Compiled)
         let INLINE_PERIOD = Regex(@"[\w][.][\w]", RegexOptions.IgnoreCase ||| RegexOptions.Multiline ||| RegexOptions.Compiled)
         let UC_ELSEWHERE = Regex(sprintf @"[%s]*?[a-zA-Z]+[A-Z]+?" PUNCT, RegexOptions.Compiled)
         let CAPFIRST = Regex(sprintf @"^[%s]*?([\w])" PUNCT, RegexOptions.Compiled)
@@ -72,7 +74,7 @@ module Internals =
                 sprintf "%s%s" (capitalize m.Groups.[1].Value) (m.Groups.[2].Value |> transf true) |> Accept
             | _ -> None
         let (|MrMrsMsDr|_|) word =
-            match MR_MRS_MS_DR.IsMatch(word) with
+            match MR_MRS_MS_DR_CAP.IsMatch(word) with
             | true -> 
                 [|Char.ToUpperInvariant(word.[0]); yield! word.[1..] |]
                 |> String 
@@ -153,7 +155,17 @@ module Internals =
                             | x -> x
                         pLast |> Array.set tc_line last 
                     let result = tc_line |> Seq.map (function | Mutable m -> m | Immutable i -> i) |> String.concat " "
-                    SUBPHRASE.Replace(result, fun m -> sprintf "%s%s" m.Groups.[1].Value (capitalize m.Groups.[2].Value))
+
+                    let subReplace (m:Match) = 
+                        let wordPrePunc = m.Groups.[1].Value
+                        let casing =
+                            if MR_MRS_MS_DR_2ND.IsMatch(wordPrePunc) then
+                                id
+                            else 
+                                capitalize
+                        sprintf "%s%s" wordPrePunc (casing m.Groups.[2].Value)
+
+                    SUBPHRASE.Replace(result, MatchEvaluator subReplace)
             }
         processed |> String.concat Environment.NewLine
 
