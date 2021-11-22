@@ -169,8 +169,8 @@ let ``Test line mangle normalized to pplatform line ending`` () =
 [<Fact>]
 let ``Test Callback`` () =
     let abbreviation (word:TitleCaseWord) =
-        if Set ["TCP"; "UDP"] |> Set.contains (word.Word.ToUpperInvariant()) then
-            Some <| word.Word.ToUpperInvariant()
+        if Set ["TCP"; "UDP"] |> Set.contains (word.Word.AlphaBody.ToUpperInvariant()) then
+            Some <| word.FullCapture.ToUpperInvariant()
         else
             None
     let s = "a simple tcp and udp wrapper"
@@ -179,8 +179,19 @@ let ``Test Callback`` () =
     Assert.Equal("A Simple TCP and Udp Wrapper", s |> String.titleCase)
     Assert.Equal("A Simple TCP and UDP Wrapper", s |> String.titleCaseWith abbreviation)
     Assert.Equal("A Simple TCP and UDP Wrapper", s.ToUpper() |> String.titleCaseWith abbreviation)
-    Assert.Equal("CRÈME BRÛLÉE", "crème brûlée" |> String.titleCaseWith (fun w -> Some <| w.Word.ToUpperInvariant()))
+    let s' = "a simple tcp. a simple udp."
+    Assert.Equal("A Simple TCP. A Simple UDP.", s'.ToUpper() |> String.titleCaseWith abbreviation)
+    Assert.Equal("CRÈME BRÛLÉE", "crème brûlée" |> String.titleCaseWith (fun w -> Some <| w.FullCapture.ToUpperInvariant()))
+
+
+[<Fact>]
+let ``Test Callback Preserve`` () =
+    let map = ["hello"; "WORLD"] |> List.map (fun x -> x.ToUpperInvariant(), x) |> Map.ofList
+    let forceCase (word:TitleCaseWord) =
+        map.TryFind(word.Word.AlphaBody.ToUpperInvariant()) |> Option.map(fun m -> word.Word.NonAlphaPrefix + m + word.Word.NonAlphaSuffix)
+
+    Assert.Equal("hello. WORLD!", "Hello. World!" |> String.titleCaseWith forceCase)
 
 [<Fact>]
 let ``Test AT&T`` () =
-    Assert.Equal("AT&T", "at&t" |> String.titleCaseWith (function | {Word=x} when x.ToUpperInvariant() = "AT&T" -> Some <| x.ToUpperInvariant() | _ -> None))
+    Assert.Equal("AT&T", "at&t" |> String.titleCaseWith (function | {FullCapture=x} when x.ToUpperInvariant() = "AT&T" -> Some <| x.ToUpperInvariant() | _ -> None))
