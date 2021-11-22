@@ -30,7 +30,7 @@ module Internals =
         let INLINE_PERIOD = Regex(@"[\w][.][\w]", RegexOptions.IgnoreCase ||| RegexOptions.Multiline ||| RegexOptions.Compiled)
         let UC_ELSEWHERE = Regex(sprintf @"[%s]*?[a-zA-Z]+[A-Z]+?" PUNCT, RegexOptions.Compiled)
         let CAPFIRST = Regex(sprintf @"^[%s]*?([\w])" PUNCT, RegexOptions.Compiled)
-        let APOS_SECOND = Regex(sprintf @"^[dol]['‘][\w]+(?:['s]{2})?[%s]?$" PUNCT, RegexOptions.IgnoreCase ||| RegexOptions.Compiled)
+        let APOS_SECOND = Regex(sprintf @"^[dolj]['‘][\w]+(?:['s]{2})?[%s]?$" PUNCT, RegexOptions.IgnoreCase ||| RegexOptions.Compiled)
         let UC_INITIALS = Regex(@"^(?:[A-Z]\.|[A-Z]\.[A-Z])+$")
         let CONSONANTS = Regex(sprintf @"\A[%s]+\Z" (Set.difference (Set ['a'..'z']) (Set ['a';'e';'i';'o';'u';'y']) |> Seq.toArray |> String),
                                 RegexOptions.IgnoreCase ||| RegexOptions.Multiline ||| RegexOptions.Compiled)
