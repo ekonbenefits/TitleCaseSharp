@@ -106,6 +106,14 @@ module Internals =
                 |> Accept
             else
                 None
+        let (|Pipes|_|) transf (word:string) =
+                if word.Contains("|") then
+                    word.Split('|') 
+                    |> Seq.map(transf false) 
+                    |> String.concat "|"
+                    |> Accept
+                else
+                    None
         let (|Abbreviation|_|) lineState (word:string) =
             let word' = if lineState.AllCaps then word.ToLowerInvariant() else word
             if CONSONANTS.IsMatch(word') && word.Length > 2 then
@@ -139,6 +147,7 @@ module Internals =
                                 | SmallWords sw -> sw
                                 | Slashes recurseFunction sl -> sl
                                 | Hyphens recurseFunction h -> h
+                                | Pipes recurseFunction pp -> pp
                                 | Abbreviation lineState ab -> ab
                                 | w -> basicCapFirs w
                         |]

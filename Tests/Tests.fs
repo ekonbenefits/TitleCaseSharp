@@ -154,6 +154,7 @@ open TitleCaseSharp
 [<InlineData("D'ANDRE", "D'Andre")>]
 [<InlineData("L'SHONDA","L'Shonda")>]
 [<InlineData("I.A.M AND A.W.", "I.A.M and A.W.")>]
+[<InlineData("JAY|JAMES","Jay|James")>]
 let ``Generated Tests`` (input:string,  expected:string) =
     Assert.Equal(expected, input |> String.titleCase)
 
