@@ -169,7 +169,7 @@ let ``Test line mangle normalized to pplatform line ending`` () =
 [<Fact>]
 let ``Test Callback`` () =
     let abbreviation (word:TitleCaseWord) =
-        if Set ["TCP"; "UDP"] |> Set.contains (word.Word.AlphaBody.ToUpperInvariant()) then
+        if Set ["TCP"; "UDP"] |> Set.contains (word.Word.CoreWord.ToUpperInvariant()) then
             Some <| word.FullCapture.ToUpperInvariant()
         else
             None
@@ -186,11 +186,11 @@ let ``Test Callback`` () =
 
 [<Fact>]
 let ``Test Callback Preserve`` () =
-    let map = ["hello"; "WORLD"] |> List.map (fun x -> x.ToUpperInvariant(), x) |> Map.ofList
+    let map = ["heLLo"; "WORLD" ; "At&T"] |> List.map (fun x -> x.ToUpperInvariant(), x) |> Map.ofList
     let forceCase (word:TitleCaseWord) =
-        map.TryFind(word.Word.AlphaBody.ToUpperInvariant()) |> Option.map(fun m -> word.Word.NonAlphaPrefix + m + word.Word.NonAlphaSuffix)
+        map.TryFind(word.Word.CoreWord.ToUpperInvariant()) |> Option.map(fun m -> word.Word.NonAlphaPrefix + m + word.Word.NonAlphaSuffix)
 
-    Assert.Equal("hello. WORLD!", "Hello. World!" |> String.titleCaseWith forceCase)
+    Assert.Equal("heLLo. WORLD! At&T?", "Hello. World! at&t?" |> String.titleCaseWith forceCase)
 
 [<Fact>]
 let ``Test AT&T`` () =

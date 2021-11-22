@@ -11,7 +11,7 @@ License: http://www.opensource.org/licenses/mit-license.php
 *)
 
 type TitleCaseLineState = { AllCaps: bool}
-type TitleCaseParsedWord = {NonAlphaPrefix:string; AlphaBody:string; NonAlphaSuffix:string}
+type TitleCaseParsedWord = {NonAlphaPrefix:string; CoreWord:string; NonAlphaSuffix:string}
 type TitleCaseWord = {FullCapture:string; Word:TitleCaseParsedWord; LineState: TitleCaseLineState}
 
 
@@ -36,7 +36,7 @@ module Internals =
         let UC_INITIALS = Regex(@"^(?:[A-Z]\.|[A-Z]\.[A-Z])+$")
         let CONSONANTS = Regex(sprintf @"\A[%s]+\Z" (Set.difference (Set ['a'..'z']) (Set ['a';'e';'i';'o';'u';'y']) |> Seq.toArray |> String),
                                 RegexOptions.IgnoreCase ||| RegexOptions.Multiline ||| RegexOptions.Compiled)
-        let CORE_WORD = Regex(@"^([^a-zA-Z]*)([a-zA-Z]+)([^a-zA-Z]*)$");
+        let CORE_WORD = Regex(@"^([^a-zA-Z]*)([a-zA-Z]+.*[a-zA-Z]+|[a-zA-Z]+)([^a-zA-Z]*)$");
 
     type PreProcessed = Mutable of string | Immutable of string
 
@@ -51,9 +51,9 @@ module Internals =
                 let m = CORE_WORD.Match(word)
                 let cw = 
                     if m.Success then
-                        { NonAlphaPrefix = m.Groups.[1].Value; AlphaBody = m.Groups.[2].Value; NonAlphaSuffix = m.Groups.[3].Value }
+                        { NonAlphaPrefix = m.Groups.[1].Value; CoreWord = m.Groups.[2].Value; NonAlphaSuffix = m.Groups.[3].Value }
                     else 
-                        {NonAlphaPrefix = ""; AlphaBody = word; NonAlphaSuffix = ""}
+                        {NonAlphaPrefix = ""; CoreWord = word; NonAlphaSuffix = ""}
 
                 {FullCapture = word; Word = cw; LineState =lineState} |> cb |> Option.bind Preserve
             | _ -> None;
